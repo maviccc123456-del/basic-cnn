@@ -1,36 +1,107 @@
-# 基础 CNN：钢材表面缺陷分类
+# Basic CNN for Steel Surface Defect Classification
 
-使用 PyTorch 逐层搭建的三层卷积神经网络，对 NEU-CLS 钢材表面图像进行六分类。模型从随机权重开始训练。
+A three-layer convolutional neural network built with PyTorch for six-class classification on NEU-CLS steel surface images. The model is trained from random weights.
 
-## 网络结构
+**Recorded test result: 83.70% accuracy — 226 correct predictions out of 270 test images.**
 
-输入为单通道灰度图，原始数据尺寸为 200 × 200。
+## What do the original images look like?
 
-| 阶段 | 操作 | 输出尺寸（省略 batch 维） |
+Each input is a **200 × 200 grayscale image** of a steel surface. The examples below show one original image from each defect category, with its source filename. They are dataset illustrations, not a selection based on prediction quality.
+
+![Original NEU-CLS images from the six defect classes](docs/images/original_samples.png)
+
+| Code | Defect category |
+| --- | --- |
+| Cr | Crazing |
+| In | Inclusion |
+| Pa | Patches |
+| PS | Pitted surface |
+| RS | Rolled-in scale |
+| Sc | Scratches |
+
+The baseline converts grayscale pixel values to a tensor in the range [0, 1]. It uses no data augmentation. Its output is one class prediction per image; it does not draw bounding boxes or segment the defect.
+
+## Model architecture
+
+The architecture is defined in [models/simple_cnn.py](models/simple_cnn.py) by combining standard PyTorch layers.
+
+| Stage | Operation | Output shape, excluding batch |
 | --- | --- | --- |
-| 输入 | 灰度图转为张量 | 1 × 200 × 200 |
-| 第一组 | 3×3 卷积 + ReLU + 2×2 最大池化 | 32 × 100 × 100 |
-| 第二组 | 3×3 卷积 + ReLU + 2×2 最大池化 | 64 × 50 × 50 |
-| 第三组 | 3×3 卷积 + ReLU + 2×2 最大池化 | 128 × 25 × 25 |
-| 全局平均池化 | AdaptiveAvgPool2d(1) | 128 × 1 × 1 |
-| 分类层 | 展平 + 全连接层 | 6 个类别的 logits |
+| Input | Grayscale image converted to a tensor | 1 × 200 × 200 |
+| Block 1 | 3×3 convolution + ReLU + 2×2 max pooling | 32 × 100 × 100 |
+| Block 2 | 3×3 convolution + ReLU + 2×2 max pooling | 64 × 50 × 50 |
+| Block 3 | 3×3 convolution + ReLU + 2×2 max pooling | 128 × 25 × 25 |
+| Global pooling | Adaptive average pooling | 128 × 1 × 1 |
+| Classifier | Flatten + fully connected layer | 6 class logits |
 
-模型定义见 `models/simple_cnn.py`。本仓库只包含基础 CNN，不包含 BatchNorm 增强版本或 ResNet18。
+This repository contains the basic CNN experiment. The architecture uses standard building blocks and is not claimed as a novel network design.
 
-## 安装
+## Training progress
 
-建议使用 Python 3.10，在本仓库目录打开终端：
+The original run trained for 10 epochs using Adam, a learning rate of 0.001, a batch size of 16, and cross-entropy loss. The training seed was 42. The checkpoint with the highest validation accuracy was selected; ties kept the earlier epoch. The test set was not used for model selection.
 
-```console
-python -m venv .venv
-python -m pip install -r requirements.txt
-```
+![Training and validation accuracy and loss over ten epochs](docs/images/training_curves.png)
 
-安装依赖前请先激活虚拟环境：Windows PowerShell 使用 `.\.venv\Scripts\Activate.ps1`，macOS/Linux 使用 `source .venv/bin/activate`。
+Training accuracy increased from **29.94% to 82.37%**, and validation accuracy increased from **30.37% to 86.30%**. Epoch 10 was selected as the best checkpoint. The curves show training and validation measurements only.
 
-## 准备数据
+## Final test results
 
-自行取得 NEU-CLS 数据集，将 1800 张原始 BMP 图片直接放到 `data/NEU-CLS/` 下，不要按类别再分子文件夹。例如：
+These results come from the original baseline run, recorded on November 4, 2026. For this documentation update, the saved checkpoint was loaded and all 270 test predictions were independently checked against the saved prediction records. The model was not retrained.
+
+| Measurement | Result |
+| --- | --- |
+| Best validation accuracy | 86.30% |
+| Selected epoch | 10 / 10 |
+| Test accuracy | **83.70%** |
+| Correct / total test predictions | **226 / 270** |
+| Incorrect predictions | 44 |
+| Macro F1 score | 0.8346 |
+
+### Confusion matrix
+
+Rows are the true classes, and columns are the predicted classes. Diagonal entries count correct predictions. Each class has 45 test images.
+
+![Confusion matrix for the baseline CNN on 270 test images](docs/images/confusion_matrix.png)
+
+| True class | Correct / test images | Recall |
+| --- | --- | --- |
+| Crazing (Cr) | 39 / 45 | 86.67% |
+| Inclusion (In) | 37 / 45 | 82.22% |
+| Patches (Pa) | 44 / 45 | 97.78% |
+| Pitted surface (PS) | 30 / 45 | 66.67% |
+| Rolled-in scale (RS) | 45 / 45 | 100.00% |
+| Scratches (Sc) | 31 / 45 | 68.89% |
+
+The model classified all 45 rolled-in scale images correctly in this test split. Its largest confusions were scratches predicted as inclusion (11 images), and pitted surface predicted as scratches (10 images).
+
+### What do the predictions look like?
+
+The top row shows a correct prediction for each true class. The bottom row shows an incorrect prediction for each class that had errors. Examples are selected as the first matching image in the saved, filename-sorted test records. Rolled-in scale has no error example because all 45 test images were classified correctly.
+
+![Actual correct and incorrect test predictions, with true labels and predicted labels](docs/images/prediction_examples.png)
+
+Each score is the maximum softmax probability, not a calibrated guarantee that the prediction is correct. The displayed images are the original test inputs; the text above each image is the model's classification result.
+
+The underlying [metrics](results/baseline_run_001/test_metrics.json), [per-image predictions](results/baseline_run_001/test_predictions.csv), [training history](results/baseline_run_001/history.csv), and [configuration](results/baseline_run_001/config.json) are included for inspection. These measurements describe one run on one dataset split; results may vary across environments.
+
+## Dataset and split
+
+The original dataset contains 1,800 BMP images. Before splitting, images are deduplicated using SHA-256 hashes of their grayscale pixel content. One duplicate pair is found: `Pa_105.bmp` and `Pa_101.bmp`. Only `Pa_101.bmp` participates in the experiment; the source files are preserved.
+
+| Split | Unique images |
+| --- | --- |
+| Training | 1,259 |
+| Validation | 270 |
+| Test | 270 |
+| Total | 1,799 |
+
+The split is stratified by class, uses seed 42, and follows an approximately 70% / 15% / 15% ratio. The persisted [split manifest](data/splits/NEU-CLS_deduplicated_v1.json) is checked against the image contents whenever data is loaded.
+
+Pixel deduplication removes exact duplicates, including differently encoded images with the same grayscale pixels. It does not establish independence between different photos of the same physical sample or exclude all near-duplicates.
+
+### Prepare the data
+
+Obtain NEU-CLS separately and place the 1,800 original BMP images directly inside `data/NEU-CLS/`, without per-class subdirectories:
 
 ```text
 data/
@@ -46,13 +117,33 @@ data/
     NEU-CLS_deduplicated_v1.json
 ```
 
-类别由文件名前缀读取：Cr（裂纹）、In（夹杂）、Pa（斑块）、PS（麻点表面）、RS（轧入氧化皮）、Sc（划痕）。原始图片和训练权重不随仓库分发。
+Class labels are read from filename prefixes. Only small example panels are included in this README; the full dataset and model weights are not distributed in the repository.
 
-仓库保留原实验的数据划分清单，加载时会核验图片内容。原实验的 1800 张图片中有一组像素完全相同的重复图，去重后为 1799 张：训练集 1259 张、验证集 270 张、测试集 270 张。划分采用随机种子 42，按类别分层，比例约为 70% / 15% / 15%。
+If your data does not match the saved manifest, loading fails rather than silently changing the experiment. First check that you have the same original dataset. To intentionally use a different dataset version, back up and move the old manifest, generate a new one, and retrain. Checkpoints from different splits cannot be mixed.
 
-如果你的数据与清单不一致，程序会报错。请先检查是否使用了相同原始数据；确需使用不同版本时，备份并移走旧清单，再重新训练。不同划分的权重与结果不能混用。像素去重不保证排除裁剪后的近似图片或同一物理样本的不同照片。
+## Installation
 
-## 训练和评估
+Python 3.10 is recommended. From the repository directory, create and activate a virtual environment.
+
+**Windows PowerShell**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+**macOS / Linux**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+The original run used PyTorch 2.5.1 with CUDA 12.1. The scripts automatically use CUDA when available and otherwise run on CPU. Choose a compatible PyTorch installation for your hardware if necessary.
+
+## Train and evaluate
 
 ```console
 python data_split.py
@@ -60,32 +151,35 @@ python train.py
 python evaluate.py
 ```
 
-默认训练 10 轮，batch size 为 16，优化器为 Adam，学习率为 0.001，损失函数为交叉熵，训练随机种子为 42。程序自动选择可用的 CUDA 或 CPU。基础版仅将灰度图片转为张量，不进行数据增强。
+Each training run creates a new directory under `outputs/leak_free/simple_cnn/`, such as `run_001/`, without overwriting older runs. Outputs include training history, the best checkpoint, and a snapshot of the data split. Evaluation uses the latest completed run, validates checkpoint provenance, and saves metrics, per-image predictions, and a confusion matrix.
 
-只按验证集准确率选择最佳模型，同分保留较早轮次，训练过程中不使用测试集选模。评估加载最近完成的训练，并校验权重与数据划分是否匹配。
-
-结果存放在 `outputs/leak_free/simple_cnn/run_001/` 等目录，每次训练创建新目录，包含训练记录、最佳权重、数据划分快照；评估后生成分类报告、逐图预测及混淆矩阵。
-
-原项目已记录的基础 CNN 测试结果为 **226 / 270，准确率 83.70%**（10 轮训练，最佳验证轮次为第 10 轮）。这是原实验记录，不是本仓库在所有设备和依赖组合上的保证；本次整理没有重新训练模型。
-
-## 检查
+## Checks and figure reproduction
 
 ```console
 python models/simple_cnn.py
 python -m unittest discover -s . -p test_data_split.py -v
 ```
 
-第一条检查输入、输出尺寸；第二条检查像素去重、划分持久化、数据变动检测以及权重与划分的匹配。
+The first command checks model input and output shapes. The nine regression checks cover pixel deduplication, persistent splits, dataset changes, and checkpoint/split matching.
 
-## 文件说明
+To reproduce the README figures, supply the original dataset and the original run directory containing `best_model.pth` and its experiment records:
 
-| 文件 | 用途 |
+```console
+python tools/build_readme_figures.py --data-dir /path/to/NEU-CLS --run-dir /path/to/run_001
+```
+
+This command independently verifies every test prediction before rebuilding the figures and copying the recorded results. The original checkpoint is required and is not included in this repository. The committed results and figures can be viewed without it.
+
+## Project files
+
+| Path | Purpose |
 | --- | --- |
-| `models/simple_cnn.py` | 基础 CNN 网络结构 |
-| `data_split.py` | 图片扫描、像素去重和持久化划分 |
-| `dataset.py` | 灰度图片加载和张量转换 |
-| `experiments.py` | 训练、验证、模型保存和测试评估 |
-| `train.py` / `evaluate.py` | 训练与评估入口 |
-| `test_data_split.py` | 数据与权重检查 |
-
-“自行搭建”指使用 PyTorch 基础层组合网络结构，不代表提出了新的原创网络架构。
+| `models/simple_cnn.py` | Three-layer baseline CNN |
+| `data_split.py` | Pixel deduplication and persistent data splits |
+| `dataset.py` | Grayscale image loading and tensor conversion |
+| `experiments.py` | Training, checkpoint selection, and test evaluation |
+| `train.py` / `evaluate.py` | Training and evaluation entry points |
+| `test_data_split.py` | Data integrity and checkpoint regression checks |
+| `docs/images/` | Original-image examples and result figures |
+| `results/baseline_run_001/` | Original experiment records, excluding weights |
+| `tools/build_readme_figures.py` | Prediction verification and figure generation |

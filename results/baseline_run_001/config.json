@@ -1,0 +1,11 @@
+{
+  "model_name": "simple_cnn",
+  "num_epochs": 10,
+  "batch_size": 16,
+  "learning_rate": 0.001,
+  "seed": 42,
+  "split_id": "abb5bf99d3d813dc5d12635aa04e30c386cba7699751dff17e4510c6ede66dc8",
+  "initialization": "random weights",
+  "torch_version": "2.5.1+cu121",
+  "device": "cuda"
+}

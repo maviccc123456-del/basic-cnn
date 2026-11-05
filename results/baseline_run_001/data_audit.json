@@ -1,0 +1,48 @@
+{
+  "split_id": "abb5bf99d3d813dc5d12635aa04e30c386cba7699751dff17e4510c6ede66dc8",
+  "source_count": 1800,
+  "unique_count": 1799,
+  "excluded_duplicates": [
+    {
+      "path": "Pa_105.bmp",
+      "kept": "Pa_101.bmp",
+      "pixel_sha256": "b9a0ffae4941e35f3dbe0f483686cd6f632d01b141f6fdc13c8e2cc6e6aa3928"
+    }
+  ],
+  "split_counts": {
+    "train": 1259,
+    "validation": 270,
+    "test": 270
+  },
+  "class_counts": {
+    "train": {
+      "Cr": 210,
+      "In": 210,
+      "PS": 210,
+      "Pa": 209,
+      "RS": 210,
+      "Sc": 210
+    },
+    "validation": {
+      "Cr": 45,
+      "In": 45,
+      "PS": 45,
+      "Pa": 45,
+      "RS": 45,
+      "Sc": 45
+    },
+    "test": {
+      "Cr": 45,
+      "In": 45,
+      "PS": 45,
+      "Pa": 45,
+      "RS": 45,
+      "Sc": 45
+    }
+  },
+  "cross_split_pixel_overlap": {
+    "train/validation": 0,
+    "train/test": 0,
+    "validation/test": 0
+  }
+}
