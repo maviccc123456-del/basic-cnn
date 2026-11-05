@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+cnn_env/
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+data/NEU-CLS/
+outputs/
+*.pth
+*.pt
+*.onnx
+split_test_*/
